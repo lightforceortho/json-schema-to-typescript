@@ -16,12 +16,12 @@ import {
 } from './types/AST'
 import {log, toSafeString} from './utils'
 
-export function generate(ast: AST, options = DEFAULT_OPTIONS): string {
+export function generate(ast: AST, alwaysExported: Set<string>, options = DEFAULT_OPTIONS): string {
   return (
     [
       options.bannerComment,
-      declareNamedTypes(ast, options, ast.standaloneName!),
-      declareNamedInterfaces(ast, options, ast.standaloneName!),
+      declareNamedTypes(ast, options, ast.standaloneName!, alwaysExported),
+      declareNamedInterfaces(ast, options, ast.standaloneName!, alwaysExported),
       declareEnums(ast, options)
     ]
       .filter(Boolean)
@@ -58,7 +58,13 @@ function declareEnums(ast: AST, options: Options, processed = new Set<AST>()): s
   }
 }
 
-function declareNamedInterfaces(ast: AST, options: Options, rootASTName: string, processed = new Set<AST>()): string {
+function declareNamedInterfaces(
+  ast: AST,
+  options: Options,
+  rootASTName: string,
+  alwaysExported: Set<string>,
+  processed = new Set<AST>()
+): string {
   if (processed.has(ast)) {
     return ''
   }
@@ -68,15 +74,17 @@ function declareNamedInterfaces(ast: AST, options: Options, rootASTName: string,
 
   switch (ast.type) {
     case 'ARRAY':
-      type = declareNamedInterfaces((ast as TArray).params, options, rootASTName, processed)
+      type = declareNamedInterfaces((ast as TArray).params, options, rootASTName, alwaysExported, processed)
       break
     case 'INTERFACE':
       type = [
         hasStandaloneName(ast) &&
-          (ast.standaloneName === rootASTName || options.declareExternallyReferenced) &&
+          (ast.standaloneName === rootASTName ||
+            alwaysExported.has(ast.standaloneName) ||
+            options.declareExternallyReferenced) &&
           generateStandaloneInterface(ast, options),
         getSuperTypesAndParams(ast)
-          .map(ast => declareNamedInterfaces(ast, options, rootASTName, processed))
+          .map(ast => declareNamedInterfaces(ast, options, rootASTName, alwaysExported, processed))
           .filter(Boolean)
           .join('\n')
       ]
@@ -87,11 +95,11 @@ function declareNamedInterfaces(ast: AST, options: Options, rootASTName: string,
     case 'TUPLE':
     case 'UNION':
       type = ast.params
-        .map(_ => declareNamedInterfaces(_, options, rootASTName, processed))
+        .map(_ => declareNamedInterfaces(_, options, rootASTName, alwaysExported, processed))
         .filter(Boolean)
         .join('\n')
       if (ast.type === 'TUPLE' && ast.spreadParam) {
-        type += declareNamedInterfaces(ast.spreadParam, options, rootASTName, processed)
+        type += declareNamedInterfaces(ast.spreadParam, options, rootASTName, alwaysExported, processed)
       }
       break
     default:
@@ -101,7 +109,13 @@ function declareNamedInterfaces(ast: AST, options: Options, rootASTName: string,
   return type
 }
 
-function declareNamedTypes(ast: AST, options: Options, rootASTName: string, processed = new Set<AST>()): string {
+function declareNamedTypes(
+  ast: AST,
+  options: Options,
+  rootASTName: string,
+  alwaysExported: Set<string>,
+  processed = new Set<AST>()
+): string {
   if (processed.has(ast)) {
     return ''
   }
@@ -112,7 +126,7 @@ function declareNamedTypes(ast: AST, options: Options, rootASTName: string, proc
   switch (ast.type) {
     case 'ARRAY':
       type = [
-        declareNamedTypes(ast.params, options, rootASTName, processed),
+        declareNamedTypes(ast.params, options, rootASTName, alwaysExported, processed),
         hasStandaloneName(ast) ? generateStandaloneType(ast, options) : undefined
       ]
         .filter(Boolean)
@@ -125,8 +139,10 @@ function declareNamedTypes(ast: AST, options: Options, rootASTName: string, proc
       type = getSuperTypesAndParams(ast)
         .map(
           ast =>
-            (ast.standaloneName === rootASTName || options.declareExternallyReferenced) &&
-            declareNamedTypes(ast, options, rootASTName, processed)
+            (ast.standaloneName === rootASTName ||
+              (ast.standaloneName && alwaysExported.has(ast.standaloneName)) ||
+              options.declareExternallyReferenced) &&
+            declareNamedTypes(ast, options, rootASTName, alwaysExported, processed)
         )
         .filter(Boolean)
         .join('\n')
@@ -137,11 +153,11 @@ function declareNamedTypes(ast: AST, options: Options, rootASTName: string, proc
       type = [
         hasStandaloneName(ast) ? generateStandaloneType(ast, options) : undefined,
         ast.params
-          .map(ast => declareNamedTypes(ast, options, rootASTName, processed))
+          .map(ast => declareNamedTypes(ast, options, rootASTName, alwaysExported, processed))
           .filter(Boolean)
           .join('\n'),
         'spreadParam' in ast && ast.spreadParam
-          ? declareNamedTypes(ast.spreadParam, options, rootASTName, processed)
+          ? declareNamedTypes(ast.spreadParam, options, rootASTName, alwaysExported, processed)
           : undefined
       ]
         .filter(Boolean)

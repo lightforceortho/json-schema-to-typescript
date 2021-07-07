@@ -106,7 +106,9 @@ export function compileFromFile(filename: string, options: Partial<Options> = DE
       throw new TypeError(`Error parsing JSON in file "${filename}"`)
     }
   )
-  return compile(schema, stripExtension(filename), {cwd: dirname(filename), ...options})
+  // NB: added mwhearty - support for tsImports property
+  const bannerComment = [options.bannerComment, ...(schema['tsImports'] || [])].join('\n')
+  return compile(schema, stripExtension(filename), {cwd: dirname(filename), ...options, bannerComment})
 }
 
 export async function compile(schema: JSONSchema4, name: string, options: Partial<Options> = {}): Promise<string> {
@@ -130,6 +132,8 @@ export async function compile(schema: JSONSchema4, name: string, options: Partia
   if (!endsWith(_options.cwd, '/')) {
     _options.cwd += '/'
   }
+
+  const alwaysExported = new Set<string>(schema['tsAlwaysCreate'] || [])
 
   const dereferenced = await dereference(schema, _options)
   if (process.env.VERBOSE) {
@@ -166,7 +170,7 @@ export async function compile(schema: JSONSchema4, name: string, options: Partia
     }
   }
 
-  const generated = generate(optimized, _options)
+  const generated = generate(optimized, alwaysExported, _options)
   log('magenta', 'generator', time(), '✅ Result:', generated)
 
   const formatted = format(generated, _options)

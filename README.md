@@ -4,6 +4,17 @@
 [npm]: https://img.shields.io/npm/v/json-schema-to-typescript.svg?style=flat-square
 [mit]: https://img.shields.io/npm/l/json-schema-to-typescript.svg?style=flat-square
 
+## Fork notes
+This is a modified version of json-schema-to-typescript module
+
+It was modified to support some additional functionality
+
+"tsAlwaysCreate": string[] - array of strings of definitions that will always be created
+
+"tsImports": string[] - array of strings of import statements as they should be included in generated file
+
+
+
 > Compile json schema to typescript typings
 
 ## Example
