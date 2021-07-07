@@ -1,7 +1,7 @@
 import {JSONSchema4Type, JSONSchema4TypeName} from 'json-schema'
 import {findKey, includes, isPlainObject, map, memoize, omit} from 'lodash'
 import {format} from 'util'
-import {Options} from './'
+import {JSONSchema, Options} from './'
 import {typesOfSchema} from './typesOfSchema'
 import {
   AST,
@@ -337,7 +337,9 @@ function parseSuperTypes(
   if (!superTypes) {
     return []
   }
-  return superTypes.map(_ => parse(_, options, undefined, processed, usedNames) as TNamedInterface)
+  return superTypes.map(
+    (superType: JSONSchema) => parse(superType, options, undefined, processed, usedNames) as TNamedInterface
+  )
 }
 
 /**
