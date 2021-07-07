@@ -3,7 +3,7 @@
 npm-debug.log
 node_modules
 *.map
-dist/test/
+dist/
 dist_tests/
 package-lock.json
 yarn-error.log
