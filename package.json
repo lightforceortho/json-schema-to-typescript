@@ -1,5 +1,5 @@
 {
-  "name": "json-schema-to-typescript",
+  "name": "@lfo/json-schema-to-typescript",
   "version": "10.1.4",
   "description": "compile json schema to typescript typings",
   "main": "dist/src/index.js",
@@ -10,6 +10,13 @@
   "engines": {
     "node": ">=10.0.0"
   },
+  "files": [
+    "dist/src"
+  ],
+  "publishConfig": {
+    "registry": "https://lightforceortho.jfrog.io/artifactory/api/npm/default-npm-local/",
+    "access": "restricted"
+  },
   "scripts": {
     "build": "npm run lint && npm run clean && npm run build:browser && npm run build:server",
     "build:browser": "browserify src/index.ts -s jstt -p tsify > dist/bundle.js",
@@ -19,14 +26,14 @@
     "tdd": "concurrently -r -p '' -k 'npm run watch' 'npm run watch:test'",
     "test": "ava --timeout=300s --verbose",
     "stresstest": "seq 1 10 | xargs -I{} npm test",
-    "prepublishOnly": "npm test",
+    "prepublishOnly": "npm run build",
     "pretest": "npm run clean && npm run build:server",
     "watch": "tsc -w",
     "watch:test": "ava -w"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bcherny/json-schema-to-typescript.git"
+    "url": "git+https://github.com/lightforce/json-schema-to-typescript.git"
   },
   "keywords": [
     "json",
