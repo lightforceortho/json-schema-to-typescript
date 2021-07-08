@@ -22,14 +22,20 @@ export function generate(ast: AST, alwaysExported: Set<string>, options = DEFAUL
       options.bannerComment,
       declareNamedTypes(ast, options, ast.standaloneName!, alwaysExported),
       declareNamedInterfaces(ast, options, ast.standaloneName!, alwaysExported),
-      declareEnums(ast, options)
+      declareEnums(ast, options, ast.standaloneName!, alwaysExported)
     ]
       .filter(Boolean)
       .join('\n\n') + '\n'
   ) // trailing newline
 }
 
-function declareEnums(ast: AST, options: Options, processed = new Set<AST>()): string {
+function declareEnums(
+  ast: AST,
+  options: Options,
+  rootASTName: string,
+  alwaysExported: Set<string>,
+  processed = new Set<AST>()
+): string {
   if (processed.has(ast)) {
     return ''
   }
@@ -39,20 +45,31 @@ function declareEnums(ast: AST, options: Options, processed = new Set<AST>()): s
 
   switch (ast.type) {
     case 'ENUM':
-      return generateStandaloneEnum(ast, options) + '\n'
+      return ast.standaloneName && (alwaysExported.has(ast.standaloneName) || ast.standaloneName === rootASTName)
+        ? generateStandaloneEnum(ast, options) + '\n'
+        : ''
     case 'ARRAY':
-      return declareEnums(ast.params, options, processed)
+      return declareEnums(ast.params, options, rootASTName, alwaysExported, processed)
     case 'UNION':
     case 'INTERSECTION':
-      return ast.params.reduce((prev, ast) => prev + declareEnums(ast, options, processed), '')
+      return ast.params.reduce(
+        (prev, ast) => prev + declareEnums(ast, options, rootASTName, alwaysExported, processed),
+        ''
+      )
     case 'TUPLE':
-      type = ast.params.reduce((prev, ast) => prev + declareEnums(ast, options, processed), '')
+      type = ast.params.reduce(
+        (prev, ast) => prev + declareEnums(ast, options, rootASTName, alwaysExported, processed),
+        ''
+      )
       if (ast.spreadParam) {
-        type += declareEnums(ast.spreadParam, options, processed)
+        type += declareEnums(ast.spreadParam, options, rootASTName, alwaysExported, processed)
       }
       return type
     case 'INTERFACE':
-      return getSuperTypesAndParams(ast).reduce((prev, ast) => prev + declareEnums(ast, options, processed), '')
+      return getSuperTypesAndParams(ast).reduce(
+        (prev, ast) => prev + declareEnums(ast, options, rootASTName, alwaysExported, processed),
+        ''
+      )
     default:
       return ''
   }
